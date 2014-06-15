@@ -10,7 +10,7 @@ extern CFStringRef QLPreviewGetDisplayBundleID(QLPreviewRef) AVAILABLE_MAC_OS_X_
 
 //extern void QLPreviewSetForceContentTypeUTI(QLPreviewRef, CFStringRef) AVAILABLE_MAC_OS_X_VERSION_10_5_AND_LATER;
 
-typedef void *QLThumbnailRef;
+//typedef void *QLThumbnailRef;
 #if 0
 extern const NSString *kQLThumbnailOptionContentTypeUTI;
 //extern const NSString *kQLThumbnailOptionIconModeKey;
