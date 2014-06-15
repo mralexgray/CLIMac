@@ -5,16 +5,13 @@
  * <http://lipidity.com/climac/>
  */
 
-@interface S : NSObject
-#if _10_6_PLUS
-<NSApplicationDelegate, NSAlertDelegate>
-#endif
-{
-@public
-	NSAlert *a;
-}
-- (void) applicationDidFinishLaunching:(NSNotification *)aNotification __attribute((noreturn));
-@end
+#import <Cocoa/Cocoa.h>
+
+#import "climac.h"
+
+@interface S : NSObject <NSApplicationDelegate> {
+	@public NSAlert *a;
+} - (void) applicationDidFinishLaunching:(NSNotification *)aNotification __attribute((noreturn)); @end
 
 int main(int argc, char *argv[]) {
 	NSAutoreleasePool *pool = [NSAutoreleasePool new];
@@ -23,32 +20,27 @@ int main(int argc, char *argv[]) {
 		{ "version", no_argument, NULL, 'V' },
 
 		{ "style", required_argument, NULL, 's' },
-		{ "message", required_argument, NULL, 'm' }, // todo: from stdin if no arg
+		{ "message", required_argument, NULL, 'm' },
 		{ "information", required_argument, NULL, 'i' },
 		{ "icon", required_argument, NULL, 'I' },
-#if _10_5_PLUS
 		{ "supression-button", no_argument, NULL, 'p' },
-#endif
 		{ NULL, 0, NULL, 0 }
 	};
 	S *s = [S new];
 	[[NSApplication sharedApplication] setDelegate:s];
 	int c;
 	NSAlert *alert = [NSAlert new];
-	while ((c = getopt_long(argc, argv, "hVs:m:i:I:"
-#if _10_5_PLUS
-							"p"
-#endif
-							, longopts, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "hVs:m:i:I:p", longopts, NULL)) != EOF) {
 		switch (c) {
 			case 's': {
 				const char *styles[] = {"warn", "info", "critical"};
 				for (size_t i = 0; i < sizeof(styles)/sizeof(styles[0]); i++) {
 					if (strncasecmp(optarg, styles[i], strlen(styles[i])) == 0) {
 						[alert setAlertStyle:i];
-						break;
+						goto end;
 					}
-				} // anything else ignored
+				}
+				errx(RET_USAGE, "Style should be one of 'warn', 'info' or 'critical'");
 			}
 				break;
 			case 'm': {
@@ -97,18 +89,17 @@ int main(int argc, char *argv[]) {
 				}
 			}
 				break;
-#if _10_5_PLUS
 			case 'p':
 				[alert setShowsSuppressionButton:YES];
 				break;
-#endif
 			case 'V':
-				PRINT_VERSION;
-				return 0;
+				climac_version_info();
+				exit(RET_SUCCESS);
 			case 'h':
 			default:
 				fprintf(stderr, "usage:  %s [-m message] [-i info] [-I icon] [-s warn|info|critical] buttons ...\n", argv[0]);
-				return (c != 'h');
+				exit(c != 'h' ? RET_USAGE : RET_SUCCESS);
+			end:;
 		}
 	}
 	argv += optind; argc -= optind;
@@ -120,23 +111,20 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	s->a = alert;
-	ProcessSerialNumber psn;
-	if (!(GetCurrentProcess(&psn) == noErr && TransformProcessType(&psn, kProcessTransformToForegroundApplication) == noErr))
-		warnx("Forced to run in background");
+	if (![NSApp setActivationPolicy:NSApplicationActivationPolicyRegular])
+		fputs("Forced to run in background.\n", stderr);
 	[pool release];
 
 	[NSApp run];
-	return 1;
+	exit(RET_FAILURE);
 }
 
 @implementation S
 - (void) applicationDidFinishLaunching:(NSNotification *) __attribute((unused)) aNotification {
 	[NSApp activateIgnoringOtherApps:YES];
 	NSInteger ret = [a runModal];
-#if _10_5_PLUS
 	if ([[a suppressionButton] state] == NSOnState)
 		fputs("suppress\n", stdout);
-#endif
 	exit((int)(ret ? ret - 1000 : 0));
 }
 @end
